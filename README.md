@@ -1,2 +1,1 @@
-# redux-saga-polling
-An example of polling using React, Redux and Redux Sagas
+An example of polling using React, Redux and Redux Sagas. This app polls https://api.icndb.com/jokes/random to show a random joke every few seconds. It provides an interface for the user to select delay, start and stop polling.
