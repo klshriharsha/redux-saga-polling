@@ -1,47 +1,51 @@
-import React, { Component } from 'react';
-import { connect } from 'react-redux';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Alert, Button, Icon, InputNumber } from 'antd';
 import axios from 'axios';
 
-import { startPolling, stopPolling, updatePollingStats, updateJoke } from './actions';
+import { startPolling as startPollingAction, stopPolling as stopPollingAction, updatePollingStats, updateJoke } from './actions';
 
-class App extends Component {
-    fetchJokes() {
+const App = () => {
+    let delay;
+    const dispatch = useDispatch();
+    const { joke, pollingStats } = useSelector(state => state);
+
+    const fetchJokes = () => {
         return axios.get('https://api.icndb.com/jokes/random');
     }
 
-    handleJoke = response => {
+    const handleJoke = response => {
         if (response && response.data && response.data.value) {
-            this.props.updateJoke(response.data.value.joke);
+            dispatch(updateJoke(response.data.value.joke));
             return true;
         }
 
         return false;
     }
 
-    handleStatsChange = stats => {
-        this.props.updatePollingStats(stats);
+    const handleStatsChange = stats => {
+        dispatch(updatePollingStats(stats))
     }
 
-    startPolling = () => {
-        this.props.startPolling({
-            asyncFetch: this.fetchJokes,
-            callback: this.handleJoke,
-            onStatsChange: this.handleStatsChange,
-            delay: this.delay || 10,
+    const startPolling = () => {
+        dispatch(startPollingAction({
+            asyncFetch: fetchJokes,
+            callback: handleJoke,
+            onStatsChange: handleStatsChange,
+            delay: delay || 10,
             retryOnFailure: true,
             retryAfter: 5,
             stopAfterRetries: 2
-        });
+        }));
     }
 
-    stopPolling = () => {
-        this.props.updatePollingStats({});
-        this.props.stopPolling();
+    const stopPolling = () => {
+        dispatch(updatePollingStats({}));
+        dispatch(dispatch(stopPollingAction()))
     }
 
-    getExtraInfo = () => {
-        const { lastResponseStatus, nextPollEta, retries } = this.props;
+    const getExtraInfo = () => {
+        const { lastResponseStatus, nextPollEta, retries } = pollingStats;
         if (
             lastResponseStatus === 'error' &&
             nextPollEta
@@ -56,68 +60,55 @@ class App extends Component {
         return '';
     }
 
-    formatSeconds(value) { return `Delay ${value} seconds`; }
+    const formatSeconds = value => { return `Delay ${value} seconds`; }
 
-    setDelay = delay => this.delay = delay;
+    const setDelay = del => delay = del;
 
-    render() {
-        const { inProgress, lastResponseStatus, fetching, joke } = this.props;
+    const { inProgress, lastResponseStatus, fetching } = pollingStats;
 
-        return (
-            <div className="container">
-                <Alert
-                    message={`Polling: ${inProgress ? `Yes ${this.getExtraInfo()}` : 'No'}`}
-                    type={`${inProgress && lastResponseStatus === 'success' ? 'success' : 'error'}`}
+    return (
+        <div className="container">
+            <Alert
+                message={`Polling: ${inProgress ? `Yes ${getExtraInfo()}` : 'No'}`}
+                type={`${inProgress && lastResponseStatus === 'success' ? 'success' : 'error'}`}
+            />
+            <br />
+            <div className="actions">
+                <InputNumber
+                    min={5}
+                    max={30}
+                    formatter={formatSeconds}
+                    defaultValue={10}
+                    onChange={setDelay}
                 />
-                <br />
-                <div className="actions">
-                    <InputNumber
-                        min={5}
-                        max={30}
-                        formatter={this.formatSeconds}
-                        defaultValue={10}
-                        onChange={this.setDelay}
-                    />
-                    <Button
-                        type="primary"
-                        onClick={this.startPolling}
-                        disabled={inProgress}
-                    >
-                        Start polling
-                    </Button>
-                    <Button
-                        type="danger"
-                        onClick={this.stopPolling}
-                        disabled={!inProgress}
-                    >
-                        Stop polling
-                    </Button>
-                </div>
-                <br />
-                <div className="joke">
-                    <h4
-                        dangerouslySetInnerHTML={{
-                            __html: joke === ''
-                                ? 'Start polling to see jokes :)'
-                                : joke
-                        }}
-                    />
-                    {fetching && <div className="loader"><Icon type="loading" /></div>}
-                </div>
+                <Button
+                    type="primary"
+                    onClick={startPolling}
+                    disabled={inProgress}
+                >
+                    Start polling
+                </Button>
+                <Button
+                    type="danger"
+                    onClick={stopPolling}
+                    disabled={!inProgress}
+                >
+                    Stop polling
+                </Button>
             </div>
-        );
-    }
+            <br />
+            <div className="joke">
+                <h4
+                    dangerouslySetInnerHTML={{
+                        __html: joke === ''
+                            ? 'Start polling to see jokes :)'
+                            : joke
+                    }}
+                />
+                {fetching && <div className="loader"><Icon type="loading" /></div>}
+            </div>
+        </div>
+    );
 }
 
-const mapStateToProps = ({ joke, pollingStats }) => ({
-    joke,
-    ...pollingStats
-});
-const mapDispatchToProps = dispatch => ({
-    startPolling: params => dispatch(startPolling(params)),
-    stopPolling: () => dispatch(stopPolling()),
-    updatePollingStats: stats => dispatch(updatePollingStats(stats)),
-    updateJoke: joke => dispatch(updateJoke(joke))
-});
-
-export default connect(mapStateToProps, mapDispatchToProps)(App);
+export default App;
