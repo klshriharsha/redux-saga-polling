@@ -1,5 +1,4 @@
-import { delay } from 'redux-saga';
-import { call, put, take, all, race } from 'redux-saga/effects';
+import { call, put, take, all, race, delay } from 'redux-saga/effects';
 
 import {
     startPolling,
@@ -41,7 +40,7 @@ function* poll(action) {
             }
 
             for (let i = 1; i <= params.delay; ++i) {
-                yield call(delay, 1000);
+                yield delay(1000);
                 stats.nextPollEta = params.delay - i;
                 params.onStatsChange(stats);
             }
@@ -59,7 +58,7 @@ function* poll(action) {
             if (shouldRetry) {
                 // Update number of retries
                 for (let i = 1; i <= params.retryAfter; ++i) {
-                    yield call(delay, 1000);
+                    yield delay(1000);
                     stats.nextPollEta = params.retryAfter - i;
                     params.onStatsChange(stats);
                 }
